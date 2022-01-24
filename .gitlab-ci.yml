@@ -1,5 +1,6 @@
 stages:
   - test
+  - publish
 
 test-job-unit:
   stage: test
@@ -13,3 +14,12 @@ test-job-lint:
   script:
     - rustup component add clippy
     - cargo clippy --all-targets
+
+publish-job-crates:
+  stage: publish
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "goodrouter" && $CI_COMMIT_TAG =~ /^v/
+  image: rust:1.58
+  script:
+    - sed --in-place 's/^version\s*=.*$/version = "'${CI_COMMIT_TAG:1}'"/' Cargo.toml
+    - cargo publish
