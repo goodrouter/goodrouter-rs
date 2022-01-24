@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "goodrouter-rs"
+name = "goodrouter"
 version = "0.0.0-local"
 dependencies = [
  "regex",

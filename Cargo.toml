@@ -1,5 +1,5 @@
 [package]
-name = "goodrouter-rs"
+name = "goodrouter"
 version = "0.0.0-local"
 edition = "2018"
 
