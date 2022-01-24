@@ -6,7 +6,7 @@ build-job:
   stage: build
   image: rust:1.58
   script:
-    - cargo build
+    - cargo build --all-targets
   artifacts:
     paths:
       - target
