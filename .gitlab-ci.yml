@@ -1,0 +1,27 @@
+stages:
+  - build
+  - test
+
+build-job:
+  stage: build
+  image: rust:1.58
+  script:
+    - cargo build
+  artifacts:
+    paths:
+      - target
+
+test-job-unit:
+  stage: test
+  dependencies: [build-job]
+  image: rust:1.58
+  script:
+    - cargo test --all-targets
+
+test-job-lint:
+  stage: test
+  dependencies: [build-job]
+  image: rust:1.58
+  script:
+    - rustup component add clippy
+    - cargo clippy --all-targets
