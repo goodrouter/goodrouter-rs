@@ -1,0 +1,6 @@
+#!/bin/sh
+
+rm -r coverage
+
+CARGO_INCREMENTAL=0 RUSTFLAGS="-Zinstrument-coverage" LLVM_PROFILE_FILE="coverage/coverage.profraw" cargo +nightly test
+~/.cargo/bin/grcov . --binary-path ./target/debug --output-path coverage/lcov.info

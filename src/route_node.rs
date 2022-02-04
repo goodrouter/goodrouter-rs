@@ -240,10 +240,13 @@ impl<'a> RouteNodeRcExt<'a> for RouteNodeRc<'a> {
                         let node_chain_rc = Rc::new(RefCell::new(node_chain));
                         {
                             let mut node_current = node_current_rc.borrow_mut();
-                            let mut node_similar = node_similar_rc.borrow_mut();
 
                             assert!(node_current.children.remove(&node_similar_rc));
                             assert!(node_current.children.insert(node_chain_rc.clone()));
+                        }
+
+                        {
+                            let mut node_similar = node_similar_rc.borrow_mut();
 
                             node_similar.anchor = &node_similar.anchor[prefix_length..];
                             node_similar.parent = Some(Rc::downgrade(&node_chain_rc));
