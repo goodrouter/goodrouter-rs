@@ -47,6 +47,9 @@ mod tests {
     fn router() {
         let mut router = Router::new();
 
+        router.insert_route("aa", "a/{a}/a");
+        router.insert_route("a", "a");
+
         router.insert_route("one", "/a");
         router.insert_route("two", "/a/{x}/{y}");
         router.insert_route("three", "/c/{x}");
