@@ -3,7 +3,7 @@ name = "goodrouter"
 version = "0.0.0-local"
 edition = "2018"
 description = "a bi directional trie router for all your routing needs"
-license = "WTFPL"
+license = "ISC"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
