@@ -2,24 +2,25 @@ stages:
   - test
   - publish
 
-test-job-unit:
+test-unit:
   stage: test
-  image: rust:1.58
+  image: rust:1.64
   script:
     - cargo test --all-targets
 
-test-job-lint:
+test-lint:
   stage: test
-  image: rust:1.58
+  image: rust:1.64
   script:
     - rustup component add clippy
     - cargo clippy --all-targets
 
-publish-job-crates:
+publish-crates:
   stage: publish
   rules:
-    - if: $CI_PROJECT_NAMESPACE == "goodrouter" && $CI_COMMIT_TAG =~ /^v/
-  image: rust:1.58
+    - if: $CI_COMMIT_REF_PROTECTED && $CI_COMMIT_TAG =~ /^v/
+  image: rust:1.64
   script:
-    - sed --in-place 's/^version\s*=.*$/version = "'${CI_COMMIT_TAG:1}'"/' Cargo.toml
+    - cargo install cargo-edit
+    - cargo set-version ${CI_COMMIT_TAG:1}
     - cargo publish --allow-dirty

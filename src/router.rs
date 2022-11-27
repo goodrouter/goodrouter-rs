@@ -44,7 +44,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn router() {
+    fn router_1() {
+        let mut router = Router::new();
+
+        router.insert_route("a", "/a");
+        router.insert_route("b", "/b/{x}");
+        router.insert_route("c", "/b/{x}/c");
+        router.insert_route("d", "/b/{x}/d");
+
+        let route = router.parse_route("/a").unwrap();
+        assert_eq!(route.name, "a");
+
+        let route = router.parse_route("/b/x").unwrap();
+        assert_eq!(route.name, "b");
+
+        let route = router.parse_route("/b/y/c").unwrap();
+        assert_eq!(route.name, "c");
+
+        let route = router.parse_route("/b/z/d").unwrap();
+        assert_eq!(route.name, "d");
+    }
+
+    #[test]
+    fn router_2() {
         let mut router = Router::new();
 
         router.insert_route("aa", "a/{a}/a");

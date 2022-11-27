@@ -23,7 +23,7 @@ pub struct RouteNode<'a> {
     name: Option<&'a str>,
     // suffix that comes after the parameter value (if any!) of the path
     anchor: &'a str,
-    // parameter name or null if this node does not represent a prameter
+    // parameter name or null if this node does not represent a parameter
     parameter: Option<&'a str>,
     // children that represent the rest of the path that needs to be matched
     children: BTreeSet<RouteNodeRc<'a>>,
@@ -37,13 +37,6 @@ impl<'a> RouteNode<'a> {
 
         for child in self.children.iter() {
             let child_borrow = child.borrow();
-
-            if child_borrow.parameter.is_some() {
-                continue;
-            }
-            if child_borrow.name.is_some() {
-                continue;
-            }
 
             let chars_child: Vec<_> = child_borrow.anchor.chars().collect();
 
@@ -108,6 +101,7 @@ impl<'a> RouteNode<'a> {
         return RouteNodeNewChain::new(name, template);
     }
 }
+
 impl<'a> Iterator for RouteNodeNewChain<'a> {
     type Item = RouteNode<'a>;
 
@@ -135,10 +129,10 @@ impl<'a> Iterator for RouteNodeNewChain<'a> {
 
 impl<'a> Ord for RouteNode<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.parameter.is_none() < other.parameter.is_none() {
+        if self.anchor.len() < other.anchor.len() {
             return Ordering::Greater;
         }
-        if self.parameter.is_none() > other.parameter.is_none() {
+        if self.anchor.len() > other.anchor.len() {
             return Ordering::Less;
         }
 
@@ -149,18 +143,18 @@ impl<'a> Ord for RouteNode<'a> {
             return Ordering::Less;
         }
 
-        if self.anchor.len() < other.anchor.len() {
-            return Ordering::Greater;
-        }
-        if self.anchor.len() > other.anchor.len() {
+        if self.parameter.is_none() < other.parameter.is_none() {
             return Ordering::Less;
+        }
+        if self.parameter.is_none() > other.parameter.is_none() {
+            return Ordering::Greater;
         }
 
-        if self.anchor > other.anchor {
-            return Ordering::Greater;
-        }
         if self.anchor < other.anchor {
             return Ordering::Less;
+        }
+        if self.anchor > other.anchor {
+            return Ordering::Greater;
         }
 
         return Ordering::Equal;
@@ -263,12 +257,16 @@ impl<'a> RouteNodeRcExt<'a> for RouteNodeRc<'a> {
                     InsertStrategy::Intermediate(common_prefix) => {
                         let node_chain_rc = Rc::new(RefCell::new(node_chain));
 
-                        let mut node_intermediate = RouteNode {
-                            anchor: common_prefix,
-                            name: None,
-                            parameter: None,
-                            children: BTreeSet::default(),
-                            parent: Some(Rc::downgrade(&node_current_rc)),
+                        let mut node_intermediate = {
+                            let node_similar = node_similar_rc.borrow();
+
+                            RouteNode {
+                                anchor: common_prefix,
+                                name: None,
+                                parameter: node_similar.parameter,
+                                children: BTreeSet::default(),
+                                parent: Some(Rc::downgrade(&node_current_rc)),
+                            }
                         };
                         assert!(node_intermediate.children.insert(node_similar_rc.clone()));
                         assert!(node_intermediate.children.insert(node_chain_rc.clone()));
@@ -289,6 +287,9 @@ impl<'a> RouteNodeRcExt<'a> for RouteNodeRc<'a> {
 
                             node_chain.anchor = &node_chain.anchor[prefix_length..];
                             node_similar.anchor = &node_similar.anchor[prefix_length..];
+
+                            node_chain.parameter = None;
+                            node_similar.parameter = None;
                         }
 
                         node_current_rc = node_chain_rc;
@@ -435,33 +436,104 @@ impl<'a> Iterator for RouteNodeRcChain<'a> {
 }
 
 mod tests {
+    #![allow(unused_imports)]
+
     use super::*;
+    use itertools::Itertools;
+    use std::iter::FromIterator;
 
     #[test]
-    fn route_node_flow() {
-        let node_root = RouteNode::default();
-        let node_root_rc = Rc::new(RefCell::new(node_root));
+    fn route_ordering() {
+        let nodes = vec![
+            RouteNode {
+                name: None,
+                parameter: Some("p"),
+                anchor: "aa",
+                parent: None,
+                children: BTreeSet::default(),
+            },
+            RouteNode {
+                name: None,
+                parameter: None,
+                anchor: "aa",
+                parent: None,
+                children: BTreeSet::default(),
+            },
+            RouteNode {
+                name: None,
+                parameter: None,
+                anchor: "xx",
+                parent: None,
+                children: BTreeSet::default(),
+            },
+            RouteNode {
+                name: Some("n"),
+                parameter: None,
+                anchor: "aa",
+                parent: None,
+                children: BTreeSet::default(),
+            },
+            RouteNode {
+                name: None,
+                parameter: None,
+                anchor: "x",
+                parent: None,
+                children: BTreeSet::default(),
+            },
+        ];
 
-        node_root_rc.insert("a", "/a");
-        node_root_rc.insert("b", "/b/{x}");
-        node_root_rc.insert("c", "/b/{x}/c");
-        node_root_rc.insert("d", "/b/{x}/d");
+        let nodes_expected = nodes.iter();
+        let nodes_actual = nodes.iter().sorted();
 
-        {
-            let node_root = node_root_rc.borrow();
-            assert_eq!(node_root.children.len(), 2);
+        assert_eq!(Vec::from_iter(nodes_actual), Vec::from_iter(nodes_expected));
+    }
+
+    #[test]
+    fn route_node_permutations() {
+        #[derive(Clone)]
+        struct RouteConfig {
+            name: &'static str,
+            template: &'static str,
         }
 
-        let route = node_root_rc.parse("/a", HashMap::default()).unwrap();
-        assert_eq!(route.name, "a");
+        let route_configs = vec![
+            RouteConfig {
+                name: "a",
+                template: "/a",
+            },
+            RouteConfig {
+                name: "b",
+                template: "/b/{x}",
+            },
+            RouteConfig {
+                name: "c",
+                template: "/b/{x}/c",
+            },
+            RouteConfig {
+                name: "d",
+                template: "/b/{x}/d",
+            },
+        ];
 
-        let route = node_root_rc.parse("/b/x", HashMap::default()).unwrap();
-        assert_eq!(route.name, "b");
+        let mut node_root_previous_rc = None;
 
-        let route = node_root_rc.parse("/b/y/c", HashMap::default()).unwrap();
-        assert_eq!(route.name, "c");
+        for route_configs in route_configs.iter().permutations(route_configs.len()) {
+            let node_root_rc = Rc::new(RefCell::new(RouteNode::default()));
 
-        let route = node_root_rc.parse("/b/z/d", HashMap::default()).unwrap();
-        assert_eq!(route.name, "d");
+            for RouteConfig { name, template } in route_configs {
+                node_root_rc.insert(name, template);
+            }
+
+            {
+                let node_root = node_root_rc.borrow();
+                assert_eq!(node_root.children.len(), 1);
+            }
+
+            if let Some(node_root_previous) = node_root_previous_rc {
+                assert_eq!(node_root_rc, node_root_previous);
+            }
+
+            node_root_previous_rc = Some(node_root_rc.clone());
+        }
     }
 }
