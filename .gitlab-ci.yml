@@ -4,13 +4,13 @@ stages:
 
 test-unit:
   stage: test
-  image: rust:1.64
+  image: rust:1.64-alpine3.15
   script:
     - cargo test --all-targets
 
 test-lint:
   stage: test
-  image: rust:1.64
+  image: rust:1.64-alpine3.15
   script:
     - rustup component add clippy
     - cargo clippy --all-targets
@@ -19,8 +19,8 @@ publish-crates:
   stage: publish
   rules:
     - if: $CI_COMMIT_REF_PROTECTED && $CI_COMMIT_TAG =~ /^v/
-  image: rust:1.64
+  image: rust:1.64-alpine3.15
   script:
-    - cargo install cargo-edit
+    - apk add cargo-edit
     - cargo set-version ${CI_COMMIT_TAG:1}
     - cargo publish --allow-dirty
