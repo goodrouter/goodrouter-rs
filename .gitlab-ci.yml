@@ -8,12 +8,42 @@ stages:
 test-unit:
   stage: test
   image: rust:1.64-alpine3.15
+  cache:
+    - key: cargo-$CI_JOB_NAME_SLUG
+      paths:
+        - .cargo
+        - target
+  variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo
   script:
-    - cargo test --all-targets
+    - apk add build-base
+    - rustup component add llvm-tools-preview
+    - cargo install grcov
+    - >
+      RUSTFLAGS="-C instrument-coverage"
+      LLVM_PROFILE_FILE="coverage/coverage.profraw"
+      cargo test --all-targets
+    - >
+      $CARGO_HOME/bin/grcov coverage/coverage.profraw
+      --binary-path target/debug
+      --output-type cobertura
+      --output-path coverage/cobertura-coverage.xml
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
 
 test-lint:
   stage: test
   image: rust:1.64-alpine3.15
+  cache:
+    - key: cargo-$CI_JOB_NAME_SLUG
+      paths:
+        - .cargo
+        - target
+  variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo
   script:
     - rustup component add clippy
     - cargo clippy --all-targets
@@ -23,6 +53,13 @@ publish-crates:
   rules:
     - if: $CI_COMMIT_REF_PROTECTED && $CI_COMMIT_TAG =~ /^v/
   image: rust:1.64-alpine3.15
+  cache:
+    - key: cargo-$CI_JOB_NAME_SLUG
+      paths:
+        - .cargo
+        - target
+  variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo
   script:
     - apk add cargo-edit
     - cargo set-version ${CI_COMMIT_TAG:1}
