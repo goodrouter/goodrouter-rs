@@ -1,6 +1,7 @@
 .*
 
 !.gitignore
+!.editorconfig
 !.gitlab-ci.yml
 !/.vscode/
 
