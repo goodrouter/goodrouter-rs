@@ -490,38 +490,15 @@ mod tests {
 
     #[test]
     fn route_node_permutations() {
-        #[derive(Clone)]
-        struct RouteConfig {
-            name: &'static str,
-            template: &'static str,
-        }
-
-        let route_configs = vec![
-            RouteConfig {
-                name: "a",
-                template: "/a",
-            },
-            RouteConfig {
-                name: "b",
-                template: "/b/{x}",
-            },
-            RouteConfig {
-                name: "c",
-                template: "/b/{x}/c",
-            },
-            RouteConfig {
-                name: "d",
-                template: "/b/{x}/d",
-            },
-        ];
+        let route_configs = vec!["/a", "/b/{x}", "/b/{x}/", "/b/{x}/c", "/b/{x}/d"];
 
         let mut node_root_previous_rc = None;
 
         for route_configs in route_configs.iter().permutations(route_configs.len()) {
             let node_root_rc = Rc::new(RefCell::new(RouteNode::default()));
 
-            for RouteConfig { name, template } in route_configs {
-                node_root_rc.insert(name, template);
+            for template in route_configs {
+                node_root_rc.insert(template, template);
             }
 
             {
