@@ -6,7 +6,8 @@
     "rust-lang.rust-analyzer",
     "vadimcn.vscode-lldb",
     "ryanluker.vscode-coverage-gutters",
-    "bungcip.better-toml"
+    "bungcip.better-toml",
+    "editorconfig.editorconfig"
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": []
