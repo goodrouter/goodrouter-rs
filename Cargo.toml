@@ -4,8 +4,7 @@ version = "0.0.0-local"
 edition = "2018"
 description = "a bi directional trie router for all your routing needs"
 license = "ISC"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+author = "LuvDaSun Software B.V."
 
 [dependencies]
 regex = "1"
