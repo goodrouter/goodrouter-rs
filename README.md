@@ -8,3 +8,57 @@ A good router should:
 - [x] not do the actual navigation!
 - [x] be framework agnostic
 - [x] be very minimal and simple!
+
+## Example
+
+```rust
+let mut router = Router::new();
+
+router.insert_route("all-products", "/product/all");
+router.insert_route("product-detail", "/product/{id}");
+
+// And now we can parse routes!
+
+{
+  let route = router.parse_route("/not-found".to_owned(),);
+  assert_eq!(route, None);
+}
+
+{
+  let route = router.parse_route("/product/all".to_owned(),);
+  assert_eq!(route, Some(Route{
+    name: "all-products".to_owned(),
+    parameters: vec![],
+  }));
+}
+
+{
+  let route = router.parse_route("/product/1".to_owned(),);
+  assert_eq!(route, Some(Route{
+    name: "product-detail".to_owned(),
+    parameters: vec![
+      ("id", "1"),
+    ],
+  }));
+}
+
+// And we can stringify routes
+
+{
+  let path = router.stringify_route(Some(Route{
+    name: "all-products".to_owned(),
+        parameters: vec![],
+  }));
+  assert_eq!(path, "/product/all".to_owned(),);
+}
+
+{
+  let path = router.stringify_route(Some(Route{
+    name: "product-detail".to_owned(),
+    parameters: vec![
+      ("id", "1"),
+    ],
+  }));
+  assert_eq!(path, "/product/2".to_owned());
+}
+```
