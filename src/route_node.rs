@@ -1,4 +1,8 @@
-use crate::{path::parse_template_parts, route::Route, string::find_common_prefix_length};
+use crate::{
+    route::Route,
+    string_utility::find_common_prefix_length,
+    string_utility::{parse_placeholders, PLACEHOLDER_REGEX},
+};
 use std::{
     cell::RefCell,
     cmp::Ordering,
@@ -404,7 +408,7 @@ pub struct RouteNodeNewChain<'a> {
 
 impl<'a> RouteNodeNewChain<'a> {
     pub fn new(name: &'a str, template: &'a str) -> Self {
-        let parts: Vec<_> = parse_template_parts(template).collect();
+        let parts: Vec<_> = parse_placeholders(template, &PLACEHOLDER_REGEX).collect();
         Self {
             name: Some(name),
             parts,
