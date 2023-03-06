@@ -8,10 +8,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cargo
-          key: cargo
+          key: ${{ runner.os }}-test-cargo
       - uses: actions/checkout@v3
+      - run: apt install grcov
       - run: rustup component add llvm-tools-preview
-      - run: cargo install grcov
       - run: >
           RUSTFLAGS="-C instrument-coverage"
           LLVM_PROFILE_FILE="coverage/coverage.profraw"
@@ -29,7 +29,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cargo
-          key: cargo
+          key: ${{ runner.os }}-lint-cargo
       - uses: actions/checkout@v3
       - run: rustup component add clippy
       - run: cargo clippy --all-targets
