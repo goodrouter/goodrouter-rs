@@ -1,0 +1,43 @@
+on: [push, pull_request]
+jobs:
+
+  test-unit:
+    runs-on: ubuntu-latest
+    container: rust:1.64-alpine3.15
+    env:
+      CARGO_HOME: ${{ github.workspace }}/.cargo
+    steps:
+      - id: cache-cargo
+        uses: actions/cache@v3
+        with:
+          path: .cargo
+          key: cargo
+      - uses: actions/checkout@v3
+      - run: apk add build-base
+      - run: rustup component add llvm-tools-preview
+      - run: cargo install grcov
+      - run: >
+          RUSTFLAGS="-C instrument-coverage"
+          LLVM_PROFILE_FILE="coverage/coverage.profraw"
+          cargo test --all-targets
+      - run: >
+          $CARGO_HOME/bin/grcov coverage/coverage.profraw
+          --binary-path target/debug
+          --output-type cobertura
+          --output-path coverage/cobertura-coverage.xml
+
+  test-lint:
+    runs-on: ubuntu-latest
+    container: rust:1.64-alpine3.15
+    env:
+      CARGO_HOME: ${{ github.workspace }}/.cargo
+    steps:
+      - id: cache-cargo
+        uses: actions/cache@v3
+        with:
+          path: .cargo
+          key: cargo
+      - uses: actions/checkout@v3
+      - run: apk add musl-dev
+      - run: rustup component add clippy
+      - run: cargo clippy --all-targets
