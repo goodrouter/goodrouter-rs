@@ -45,6 +45,7 @@ test-lint:
   variables:
     CARGO_HOME: $CI_PROJECT_DIR/.cargo
   script:
+    - apk add musl-dev
     - rustup component add clippy
     - cargo clippy --all-targets
 
