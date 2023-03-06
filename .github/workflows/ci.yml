@@ -10,17 +10,7 @@ jobs:
           path: ~/.cargo
           key: ${{ runner.os }}-test-cargo
       - uses: actions/checkout@v3
-      - run: apt install grcov
-      - run: rustup component add llvm-tools-preview
-      - run: >
-          RUSTFLAGS="-C instrument-coverage"
-          LLVM_PROFILE_FILE="coverage/coverage.profraw"
-          cargo test --all-targets
-      - run: >
-          grcov coverage/coverage.profraw
-          --binary-path target/debug
-          --output-type cobertura
-          --output-path coverage/cobertura-coverage.xml
+      - run: cargo test --all-targets
 
   test-lint:
     runs-on: ubuntu-latest
