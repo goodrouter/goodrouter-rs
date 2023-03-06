@@ -3,7 +3,6 @@ jobs:
 
   test-unit:
     runs-on: ubuntu-latest
-    container: rust:1.64-alpine3.15
     env:
       CARGO_HOME: ${{ github.workspace }}/.cargo
     steps:
@@ -28,7 +27,6 @@ jobs:
 
   test-lint:
     runs-on: ubuntu-latest
-    container: rust:1.64-alpine3.15
     env:
       CARGO_HOME: ${{ github.workspace }}/.cargo
     steps:
