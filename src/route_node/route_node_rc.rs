@@ -1,7 +1,8 @@
 use super::route_node_merge::*;
 use super::*;
 use crate::template::template_pairs::parse_template_pairs;
-use crate::template::TEMPLATE_PLACEHOLDER_REGEX;
+use regex::Regex;
+use std::borrow::Cow;
 use std::cmp::min;
 
 pub fn route_node_parse<'a, 'b>(
@@ -80,18 +81,20 @@ pub fn route_node_parse<'a, 'b>(
     Default::default()
 }
 
-pub fn route_node_stringify(node_rc: RouteNodeRc, parameter_values: &Vec<&str>) -> String {
-    let mut parameter_index = parameter_values.len();
-    let mut path_parts: Vec<&str> = Vec::new();
+pub fn route_node_stringify<'a>(
+    node_rc: RouteNodeRc<'a>,
+    parameter_values: Vec<Cow<'a, str>>,
+) -> Cow<'a, str> {
+    let mut parameter_values = parameter_values.clone();
     let mut current_node_rc = Some(node_rc);
+    let mut path_parts = Vec::new();
 
     while let Some(node_rc) = current_node_rc {
         let node = node_rc.borrow();
-        path_parts.insert(0, node.anchor);
+        path_parts.insert(0, Cow::Borrowed(node.anchor));
 
         if node.has_parameter {
-            parameter_index -= 1;
-            let value = parameter_values[parameter_index];
+            let value = parameter_values.pop().unwrap();
             path_parts.insert(0, value);
         }
 
@@ -101,16 +104,19 @@ pub fn route_node_stringify(node_rc: RouteNodeRc, parameter_values: &Vec<&str>) 
             .map(|parent_node_weak| parent_node_weak.upgrade().unwrap());
     }
 
-    path_parts.join("")
+    path_parts
+        .into_iter()
+        .reduce(|path, path_part| path + path_part)
+        .unwrap()
 }
 
 pub fn route_node_insert<'a>(
     root_node_rc: RouteNodeRc<'a>,
     name: &'a str,
     template: &'a str,
+    parameter_placeholder_re: &'a Regex,
 ) -> RouteNodeRc<'a> {
-    let template_pairs: Vec<_> =
-        parse_template_pairs(template, &TEMPLATE_PLACEHOLDER_REGEX).collect();
+    let template_pairs: Vec<_> = parse_template_pairs(template, parameter_placeholder_re).collect();
     let route_parameter_names: Vec<_> = template_pairs
         .clone()
         .into_iter()
@@ -147,6 +153,7 @@ pub fn route_node_insert<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::template::TEMPLATE_PLACEHOLDER_REGEX;
     use itertools::Itertools;
 
     #[test]
@@ -159,7 +166,12 @@ mod tests {
             let node_root_rc = Rc::new(RefCell::new(RouteNode::default()));
 
             for template in route_configs {
-                route_node_insert(node_root_rc.clone(), template, template);
+                route_node_insert(
+                    node_root_rc.clone(),
+                    template,
+                    template,
+                    &TEMPLATE_PLACEHOLDER_REGEX,
+                );
             }
 
             {

@@ -1,39 +1,100 @@
 use crate::{
     route_node::route_node_rc::{route_node_insert, route_node_parse, route_node_stringify},
     route_node::RouteNodeRc,
+    template::TEMPLATE_PLACEHOLDER_REGEX,
 };
-use std::collections::HashMap;
+use regex::Regex;
+use std::{borrow::Cow, collections::HashMap};
 
-#[derive(Debug, Default)]
+type ParameterValueEncoder = dyn Fn(&str) -> Cow<str>;
+type ParameterValueDecoder = dyn Fn(&str) -> Cow<str>;
+
 pub struct Router<'a> {
     root_node_rc: RouteNodeRc<'a>,
     leaf_nodes_rc: HashMap<&'a str, RouteNodeRc<'a>>,
+    maximum_parameter_value_length: usize,
+    parameter_placeholder_re: &'a Regex,
+    parameter_value_encoder: Box<ParameterValueEncoder>,
+    parameter_value_decoder: Box<ParameterValueDecoder>,
 }
 
 impl<'a> Router<'a> {
     pub fn new() -> Self {
+        fn parameter_encoder(value: &str) -> Cow<str> {
+            urlencoding::encode(value)
+        }
+        fn parameter_decoder(value: &str) -> Cow<str> {
+            urlencoding::decode(value).unwrap_or(Cow::Borrowed(value))
+        }
+
+        let parameter_value_encoder = Box::new(parameter_encoder);
+        let parameter_value_decoder = Box::new(parameter_decoder);
+
         Self {
             root_node_rc: RouteNodeRc::default(),
             leaf_nodes_rc: HashMap::new(),
+            maximum_parameter_value_length: 20,
+            parameter_placeholder_re: &TEMPLATE_PLACEHOLDER_REGEX,
+            parameter_value_encoder,
+            parameter_value_decoder,
         }
     }
 
+    pub fn set_maximum_parameter_value_length(&mut self, value: usize) -> &mut Self {
+        self.maximum_parameter_value_length = value;
+
+        self
+    }
+
+    pub fn set_parameter_placeholder_re(&mut self, value: &'a Regex) -> &mut Self {
+        self.parameter_placeholder_re = value;
+
+        self
+    }
+
+    pub fn set_parameter_value_encoder(&mut self, value: Box<ParameterValueEncoder>) -> &mut Self {
+        self.parameter_value_encoder = value;
+
+        self
+    }
+
+    pub fn set_parameter_value_decoder(&mut self, value: Box<ParameterValueDecoder>) -> &mut Self {
+        self.parameter_value_decoder = value;
+
+        self
+    }
+
     pub fn insert_route(&mut self, name: &'a str, template: &'a str) -> &mut Self {
-        let leaf_node_rc = route_node_insert(self.root_node_rc.clone(), name, template);
+        let leaf_node_rc = route_node_insert(
+            self.root_node_rc.clone(),
+            name,
+            template,
+            self.parameter_placeholder_re,
+        );
         self.leaf_nodes_rc.insert(name, leaf_node_rc);
 
         self
     }
 
-    pub fn parse_route<'b>(&self, path: &'b str) -> (Option<&'a str>, HashMap<&'a str, &'b str>) {
-        let (route_name, parameter_names, parameter_values) =
-            route_node_parse(self.root_node_rc.clone(), path, 20);
+    pub fn parse_route<'b>(
+        &self,
+        path: &'b str,
+    ) -> (Option<&'a str>, HashMap<&'a str, Cow<'b, str>>) {
+        let (route_name, parameter_names, parameter_values) = route_node_parse(
+            self.root_node_rc.clone(),
+            path,
+            self.maximum_parameter_value_length,
+        );
 
         if let Some(route_name) = route_name {
             let parameters: HashMap<_, _> = parameter_names
                 .clone()
                 .into_iter()
-                .zip(parameter_values)
+                .zip(
+                    parameter_values
+                        .iter()
+                        .map(|parameter_value| (self.parameter_value_decoder)(parameter_value)),
+                )
                 .collect();
 
             (Some(route_name), parameters)
@@ -42,29 +103,36 @@ impl<'a> Router<'a> {
         }
     }
 
-    pub fn stringify_route<'b>(
+    pub fn stringify_route(
         &self,
         route_name: &'a str,
-        route_parameters: &HashMap<&'a str, &'b str>,
-    ) -> Option<String> {
+        route_parameters: &'a HashMap<&'a str, &'a str>,
+    ) -> Option<Cow<str>> {
         if let Some(node_rc) = self.leaf_nodes_rc.get(route_name) {
-            let mut parameter_values: Vec<&str> = Default::default();
+            let parameter_values: Vec<_> = node_rc
+                .borrow()
+                .route_parameter_names
+                .iter()
+                .map(|parameter_name| route_parameters.get(parameter_name).unwrap())
+                .map(|parameter_value| (self.parameter_value_encoder)(parameter_value))
+                .collect();
 
-            for parameter in node_rc.borrow().route_parameter_names.iter() {
-                parameter_values.push(route_parameters.get(parameter).unwrap());
-            }
-
-            Some(route_node_stringify(node_rc.clone(), &parameter_values))
+            Some(route_node_stringify(node_rc.clone(), parameter_values))
         } else {
             None
         }
     }
 }
 
+impl<'a> Default for Router<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::template::TEMPLATE_PLACEHOLDER_REGEX;
     use std::collections::HashSet;
 
     #[test]
@@ -82,28 +150,46 @@ mod tests {
 
         let (route_name, route_parameters) = router.parse_route("/b/123");
         assert_eq!(route_name.unwrap(), "b");
-        assert_eq!(route_parameters, vec![("x", "123")].into_iter().collect(),);
+        assert_eq!(
+            route_parameters,
+            vec![("x", "123")]
+                .into_iter()
+                .map(|(k, v)| (k, Cow::Borrowed(v)))
+                .collect(),
+        );
 
         let (route_name, route_parameters) = router.parse_route("/b/456/c");
         assert_eq!(route_name.unwrap(), "c");
-        assert_eq!(route_parameters, vec![("y", "456")].into_iter().collect(),);
+        assert_eq!(
+            route_parameters,
+            vec![("y", "456")]
+                .into_iter()
+                .map(|(k, v)| (k, Cow::Borrowed(v)))
+                .collect(),
+        );
 
         let (route_name, route_parameters) = router.parse_route("/b/789/d");
         assert_eq!(route_name.unwrap(), "d");
-        assert_eq!(route_parameters, vec![("z", "789")].into_iter().collect(),);
+        assert_eq!(
+            route_parameters,
+            vec![("z", "789")]
+                .into_iter()
+                .map(|(k, v)| (k, Cow::Borrowed(v)))
+                .collect(),
+        );
     }
 
     #[test]
     fn router_2() {
         let mut router = Router::new();
 
-        router.insert_route("aa", "a/{a}/a");
-        router.insert_route("a", "a");
-
-        router.insert_route("one", "/a");
-        router.insert_route("two", "/a/{x}/{y}");
-        router.insert_route("three", "/c/{x}");
-        router.insert_route("four", "/c/{y}/{z}/");
+        router
+            .insert_route("aa", "a/{a}/a")
+            .insert_route("a", "a")
+            .insert_route("one", "/a")
+            .insert_route("two", "/a/{x}/{y}")
+            .insert_route("three", "/c/{x}")
+            .insert_route("four", "/c/{y}/{z}/");
 
         let (route_name, _route_parameters) = router.parse_route("/a");
         assert_eq!(route_name.unwrap(), "one");
@@ -112,7 +198,10 @@ mod tests {
         assert_eq!(route_name.unwrap(), "two");
         assert_eq!(
             route_parameters,
-            vec![("x", "1"), ("y", "2"),].into_iter().collect(),
+            vec![("x", "1"), ("y", "2"),]
+                .into_iter()
+                .map(|(k, v)| (k, Cow::Borrowed(v)))
+                .collect(),
         );
 
         let route_name = "two";
@@ -124,24 +213,39 @@ mod tests {
 
         let (route_name, route_parameters) = router.parse_route("/c/3");
         assert_eq!(route_name.unwrap(), "three");
-        assert_eq!(route_parameters, vec![("x", "3"),].into_iter().collect(),);
+        assert_eq!(
+            route_parameters,
+            vec![("x", "3"),]
+                .into_iter()
+                .map(|(k, v)| (k, Cow::Borrowed(v)))
+                .collect(),
+        );
 
         let (route_name, route_parameters) = router.parse_route("/c/3/4");
         assert_eq!(route_name.unwrap(), "three");
-        assert_eq!(route_parameters, vec![("x", "3/4"),].into_iter().collect(),);
+        assert_eq!(
+            route_parameters,
+            vec![("x", "3/4"),]
+                .into_iter()
+                .map(|(k, v)| (k, Cow::Borrowed(v)))
+                .collect(),
+        );
 
         let route_name = "three";
         let route_parameters = vec![("x", "3/4")].into_iter().collect();
         let path = router
             .stringify_route(route_name, &route_parameters)
             .unwrap();
-        assert_eq!(path, "/c/3/4");
+        assert_eq!(path, "/c/3%2F4");
 
         let (route_name, route_parameters) = router.parse_route("/c/3/4/");
         assert_eq!(route_name.unwrap(), "four");
         assert_eq!(
             route_parameters,
-            vec![("y", "3"), ("z", "4"),].into_iter().collect(),
+            vec![("y", "3"), ("z", "4"),]
+                .into_iter()
+                .map(|(k, v)| (k, Cow::Borrowed(v)))
+                .collect(),
         );
     }
 
@@ -187,8 +291,7 @@ mod tests {
 
         let all_parameters: HashMap<_, _> = all_parameter_names
             .into_iter()
-            .zip(all_parameter_values.iter())
-            .map(|(name, value)| (name, value.as_str()))
+            .zip(all_parameter_values.iter().map(|v| v.as_str()))
             .collect();
 
         let mut router = Router::new();
@@ -205,12 +308,12 @@ mod tests {
             let path = &paths[index];
             let template = templates[index];
 
-            let (route_name, route_parameters) = router.parse_route(path.as_str());
+            let (route_name, route_parameters) = router.parse_route(path);
 
             let expected_parameters: HashMap<_, _> = route_parameters
                 .keys()
                 .cloned()
-                .map(|key| (key, all_parameters[key]))
+                .map(|key| (key, Cow::Borrowed(all_parameters[key])))
                 .collect();
 
             assert_eq!(route_name, Some(template));
