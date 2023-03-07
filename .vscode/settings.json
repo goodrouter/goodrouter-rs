@@ -4,11 +4,7 @@
     "source.fixAll": true,
     "source.organizeImports": true
   },
-  "editor.rulers": [
-    100
-  ],
-  "cSpell.words": [
-    "goodrouter",
-    "itertools"
-  ]
+  "editor.rulers": [100],
+  "rust-analyzer.check.command": "clippy",
+  "cSpell.words": ["goodrouter", "itertools", "urlencoding"]
 }

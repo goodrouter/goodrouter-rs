@@ -54,7 +54,7 @@ fn setup_group(criterion: &mut Criterion, name: &str) {
 
     let parameters = parameter_names
         .into_iter()
-        .zip(parameter_values.iter().map(|value| &value[..]))
+        .zip(parameter_values.iter().map(|v| v.as_str()))
         .collect();
 
     let template_count = templates.len();
