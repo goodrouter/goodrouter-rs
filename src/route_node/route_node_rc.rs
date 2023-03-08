@@ -5,11 +5,11 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::cmp::min;
 
-pub fn route_node_parse<'a, 'b>(
-    node_rc: RouteNodeRc<'a>,
-    path: &'b str,
+pub fn route_node_parse<'r, 'f, K: Copy>(
+    node_rc: RouteNodeRc<'r, K>,
+    path: &'f str,
     maximum_parameter_value_length: usize,
-) -> (Option<&'a str>, Vec<&'a str>, Vec<&'b str>) {
+) -> (Option<K>, Vec<&'r str>, Vec<&'f str>) {
     let mut path = path;
     let mut parameter_values: Vec<&str> = Default::default();
 
@@ -69,9 +69,9 @@ pub fn route_node_parse<'a, 'b>(
 
     // if the node had a route name and there is no path left to match against then we found a route
     if path.is_empty() {
-        if let Some(route_name) = node.route_name {
+        if let Some(route_key) = node.route_key {
             return (
-                Some(route_name),
+                Some(route_key),
                 node.route_parameter_names.clone(),
                 parameter_values,
             );
@@ -81,10 +81,13 @@ pub fn route_node_parse<'a, 'b>(
     Default::default()
 }
 
-pub fn route_node_stringify<'a>(
-    node_rc: RouteNodeRc<'a>,
-    parameter_values: Vec<Cow<'a, str>>,
-) -> Cow<'a, str> {
+pub fn route_node_stringify<'r, 'f, K>(
+    node_rc: RouteNodeRc<'r, K>,
+    parameter_values: Vec<Cow<'f, str>>,
+) -> Cow<'f, str>
+where
+    'r: 'f,
+{
     let mut parameter_values = parameter_values.clone();
     let mut current_node_rc = Some(node_rc);
     let mut path_parts = Vec::new();
@@ -110,16 +113,16 @@ pub fn route_node_stringify<'a>(
         .unwrap()
 }
 
-pub fn route_node_insert<'a>(
-    root_node_rc: RouteNodeRc<'a>,
-    name: &'a str,
-    template: &'a str,
-    parameter_placeholder_re: &'a Regex,
-) -> RouteNodeRc<'a> {
+pub fn route_node_insert<'r, K: Copy>(
+    root_node_rc: RouteNodeRc<'r, K>,
+    route_key: K,
+    template: &'r str,
+    parameter_placeholder_re: &'r Regex,
+) -> RouteNodeRc<'r, K> {
     let template_pairs: Vec<_> = parse_template_pairs(template, parameter_placeholder_re).collect();
     let route_parameter_names: Vec<_> = template_pairs
-        .clone()
-        .into_iter()
+        .iter()
+        .cloned()
         .filter_map(|(_anchor, parameter)| parameter)
         .collect();
 
@@ -127,8 +130,8 @@ pub fn route_node_insert<'a>(
     for index in 0..template_pairs.len() {
         let (anchor, parameter) = template_pairs[index];
         let has_parameter = parameter.is_some();
-        let route_name = if index == template_pairs.len() - 1 {
-            Some(name)
+        let route_key = if index == template_pairs.len() - 1 {
+            Some(route_key)
         } else {
             None
         };
@@ -141,7 +144,7 @@ pub fn route_node_insert<'a>(
             child_node_rc,
             anchor,
             has_parameter,
-            route_name,
+            route_key,
             route_parameter_names.clone(),
             common_prefix_length,
         );

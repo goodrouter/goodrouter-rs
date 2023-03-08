@@ -10,26 +10,26 @@ use std::{
     rc::{Rc, Weak},
 };
 
-pub type RouteNodeRc<'a> = Rc<RefCell<RouteNode<'a>>>;
-type RouteNodeWeak<'a> = Weak<RefCell<RouteNode<'a>>>;
+pub type RouteNodeRc<'r, K> = Rc<RefCell<RouteNode<'r, K>>>;
+pub type RouteNodeWeak<'r, K> = Weak<RefCell<RouteNode<'r, K>>>;
 
-#[derive(Debug, Default)]
-pub struct RouteNode<'a> {
-    // the route's name, if any
-    pub route_name: Option<&'a str>,
+#[derive(Debug)]
+pub struct RouteNode<'r, K> {
+    // the route's key, if any
+    pub route_key: Option<K>,
     // the route parameter names
-    pub route_parameter_names: Vec<&'a str>,
+    pub route_parameter_names: Vec<&'r str>,
     // suffix that comes after the parameter value (if any!) of the path
-    anchor: &'a str,
+    anchor: &'r str,
     // does this node has a parameter
     has_parameter: bool,
     // children that represent the rest of the path that needs to be matched
-    children: BTreeSet<RouteNodeRc<'a>>,
+    children: BTreeSet<RouteNodeRc<'r, K>>,
     // parent node, should only be null for the root node
-    parent: Option<RouteNodeWeak<'a>>,
+    parent: Option<RouteNodeWeak<'r, K>>,
 }
 
-impl<'a> Ord for RouteNode<'a> {
+impl<'r, K> Ord for RouteNode<'r, K> {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.anchor.len() < other.anchor.len() {
             return Ordering::Greater;
@@ -56,17 +56,30 @@ impl<'a> Ord for RouteNode<'a> {
     }
 }
 
-impl<'a> PartialOrd for RouteNode<'a> {
+impl<'r, K> PartialOrd for RouteNode<'r, K> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a> Eq for RouteNode<'a> {}
+impl<'r, K> Eq for RouteNode<'r, K> {}
 
-impl<'a> PartialEq for RouteNode<'a> {
+impl<'r, K> PartialEq for RouteNode<'r, K> {
     fn eq(&self, other: &Self) -> bool {
         self.anchor == other.anchor && self.has_parameter == other.has_parameter
+    }
+}
+
+impl<'r, K> Default for RouteNode<'r, K> {
+    fn default() -> Self {
+        Self {
+            route_key: None,
+            route_parameter_names: Default::default(),
+            anchor: Default::default(),
+            has_parameter: Default::default(),
+            children: Default::default(),
+            parent: Default::default(),
+        }
     }
 }
 
@@ -80,21 +93,25 @@ mod tests {
     fn route_ordering() {
         let nodes = vec![
             RouteNode {
+                route_key: None,
                 has_parameter: false,
                 anchor: "aa",
                 ..Default::default()
             },
             RouteNode {
+                route_key: Some(&1),
                 has_parameter: false,
                 anchor: "xx",
                 ..Default::default()
             },
             RouteNode {
+                route_key: None,
                 has_parameter: true,
                 anchor: "aa",
                 ..Default::default()
             },
             RouteNode {
+                route_key: None,
                 has_parameter: false,
                 anchor: "x",
                 ..Default::default()

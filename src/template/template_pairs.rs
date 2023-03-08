@@ -1,18 +1,18 @@
 use super::template_parts::{parse_template_parts, TemplateParts};
 use regex::Regex;
 
-pub fn parse_template_pairs<'a>(template: &'a str, re: &'a Regex) -> TemplatePairs<'a> {
+pub fn parse_template_pairs<'r>(template: &'r str, re: &'r Regex) -> TemplatePairs<'r> {
     TemplatePairs::new(template, re)
 }
 
-pub struct TemplatePairs<'a> {
-    parts: TemplateParts<'a>,
+pub struct TemplatePairs<'r> {
+    parts: TemplateParts<'r>,
     index: usize,
     is_finished: bool,
 }
 
-impl<'a> TemplatePairs<'a> {
-    fn new(template: &'a str, re: &'a Regex) -> Self {
+impl<'r> TemplatePairs<'r> {
+    fn new(template: &'r str, re: &'r Regex) -> Self {
         let parts = parse_template_parts(template, re);
         let index = 0;
         let is_finished = false;
@@ -25,8 +25,8 @@ impl<'a> TemplatePairs<'a> {
     }
 }
 
-impl<'a> Iterator for TemplatePairs<'a> {
-    type Item = (&'a str, Option<&'a str>);
+impl<'r> Iterator for TemplatePairs<'r> {
+    type Item = (&'r str, Option<&'r str>);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.is_finished {

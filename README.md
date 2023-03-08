@@ -16,51 +16,47 @@ Check out our (website)[https://www.goodrouter.org], join our (Discord server)[h
 ```rust
 let mut router = Router::new();
 
-router.insert_route("all-products", "/product/all");
-router.insert_route("product-detail", "/product/{id}");
+router
+    .insert_route("all-products", "/product/all")
+    .insert_route("product-detail", "/product/{id}");
 
 // And now we can parse routes!
 
 {
-  let route = router.parse_route("/not-found");
-  assert_eq!(route, None);
+    let (route_key, route_parameters) = router.parse_route("/not-found");
+    assert_eq!(route_key, None);
+    assert_eq!(route_parameters, vec![].into_iter().collect());
 }
 
 {
-  let route = router.parse_route("/product/all");
-  assert_eq!(route, Some(Route{
-    name: "all-products".to_owned(),
-    parameters: vec![],
-  }));
+    let (route_key, route_parameters) = router.parse_route("/product/all");
+    assert_eq!(route_key, Some("all-products"));
+    assert_eq!(route_parameters, vec![].into_iter().collect());
 }
 
 {
-  let route = router.parse_route("/product/1");
-  assert_eq!(route, Some(Route{
-    name: "product-detail".to_owned(),
-    parameters: vec![
-      ("id", "1"),
-    ],
-  }));
+    let (route_key, route_parameters) = router.parse_route("/product/1");
+    assert_eq!(route_key, Some("product-detail"));
+    assert_eq!(
+        route_parameters,
+        vec![("id", "1")]
+            .into_iter()
+            .map(|(k, v)| (k, Cow::Borrowed(v)))
+            .collect()
+    );
 }
 
 // And we can stringify routes
 
 {
-  let path = router.stringify_route(Route{
-    name: "all-products".to_owned(),
-        parameters: vec![],
-  });
-  assert_eq!(path, "/product/all".to_owned(),);
+    let route_parameters: HashMap<_, _> = vec![].into_iter().collect();
+    let path = router.stringify_route("all-products", &route_parameters);
+    assert_eq!(path.unwrap().into_owned(), "/product/all".to_owned());
 }
 
 {
-  let path = router.stringify_route(Route{
-    name: "product-detail".to_owned(),
-    parameters: vec![
-      ("id", "1"),
-    ],
-  });
-  assert_eq!(path, "/product/2".to_owned());
+    let route_parameters: HashMap<_, _> = vec![("id", "2")].into_iter().collect();
+    let path = router.stringify_route("product-detail", &route_parameters);
+    assert_eq!(path.unwrap().into_owned(), "/product/2".to_owned());
 }
 ```

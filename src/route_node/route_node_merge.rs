@@ -1,28 +1,28 @@
 use super::*;
 use std::{cell::RefCell, rc::Rc};
 
-pub fn route_node_merge<'a>(
-    parent_node_rc: RouteNodeRc<'a>,
-    child_node_rc: Option<RouteNodeRc<'a>>,
-    anchor: &'a str,
+pub fn route_node_merge<'r, K>(
+    parent_node_rc: RouteNodeRc<'r, K>,
+    child_node_rc: Option<RouteNodeRc<'r, K>>,
+    anchor: &'r str,
     has_parameter: bool,
-    route_name: Option<&'a str>,
-    route_parameter_names: Vec<&'a str>,
+    route_key: Option<K>,
+    route_parameter_names: Vec<&'r str>,
     common_prefix_length: usize,
-) -> RouteNodeRc<'a> {
+) -> RouteNodeRc<'r, K> {
     if let Some(child_node_rc) = child_node_rc {
         let common_prefix = &anchor[..common_prefix_length];
         let child_anchor = child_node_rc.borrow().anchor;
 
         if child_anchor == anchor {
-            return route_node_merge_join(child_node_rc, route_name, route_parameter_names.clone());
+            return route_node_merge_join(child_node_rc, route_key, route_parameter_names.clone());
         } else if child_anchor == common_prefix {
             return route_node_merge_add_to_child(
                 parent_node_rc,
                 child_node_rc,
                 anchor,
                 has_parameter,
-                route_name,
+                route_key,
                 route_parameter_names.clone(),
                 common_prefix_length,
             );
@@ -32,7 +32,7 @@ pub fn route_node_merge<'a>(
                 child_node_rc,
                 anchor,
                 has_parameter,
-                route_name,
+                route_key,
                 route_parameter_names.clone(),
                 common_prefix_length,
             );
@@ -42,7 +42,7 @@ pub fn route_node_merge<'a>(
                 child_node_rc,
                 anchor,
                 has_parameter,
-                route_name,
+                route_key,
                 route_parameter_names.clone(),
                 common_prefix_length,
             );
@@ -52,23 +52,23 @@ pub fn route_node_merge<'a>(
             parent_node_rc,
             anchor,
             has_parameter,
-            route_name,
+            route_key,
             route_parameter_names.clone(),
         );
     }
 }
 
-fn route_node_merge_new<'a>(
-    parent_node_rc: RouteNodeRc<'a>,
-    anchor: &'a str,
+fn route_node_merge_new<'r, K>(
+    parent_node_rc: RouteNodeRc<'r, K>,
+    anchor: &'r str,
     has_parameter: bool,
-    route_name: Option<&'a str>,
-    route_parameter_names: Vec<&'a str>,
-) -> RouteNodeRc<'a> {
-    let new_node = RouteNode {
+    route_key: Option<K>,
+    route_parameter_names: Vec<&'r str>,
+) -> RouteNodeRc<'r, K> {
+    let new_node = RouteNode::<K> {
         anchor,
         has_parameter,
-        route_name,
+        route_key,
         route_parameter_names,
         parent: Some(Rc::downgrade(&parent_node_rc)),
         ..Default::default()
@@ -81,38 +81,38 @@ fn route_node_merge_new<'a>(
     node_new_rc
 }
 
-fn route_node_merge_join<'a>(
-    child_node_rc: RouteNodeRc<'a>,
-    route_name: Option<&'a str>,
-    route_parameter_names: Vec<&'a str>,
-) -> RouteNodeRc<'a> {
+fn route_node_merge_join<'r, K>(
+    child_node_rc: RouteNodeRc<'r, K>,
+    route_key: Option<K>,
+    route_parameter_names: Vec<&'r str>,
+) -> RouteNodeRc<'r, K> {
     let mut child_node = child_node_rc.borrow_mut();
 
-    if child_node.route_name.is_some() && route_name.is_some() {
+    if child_node.route_key.is_some() && route_key.is_some() {
         panic!("ambiguous route")
     }
 
-    if child_node.route_name.is_none() {
-        child_node.route_name = route_name;
+    if child_node.route_key.is_none() {
+        child_node.route_key = route_key;
         child_node.route_parameter_names = route_parameter_names;
     }
 
     child_node_rc.clone()
 }
 
-fn route_node_merge_intermediate<'a>(
-    parent_node_rc: RouteNodeRc<'a>,
-    child_node_rc: RouteNodeRc<'a>,
-    anchor: &'a str,
+fn route_node_merge_intermediate<'r, K>(
+    parent_node_rc: RouteNodeRc<'r, K>,
+    child_node_rc: RouteNodeRc<'r, K>,
+    anchor: &'r str,
     has_parameter: bool,
-    route_name: Option<&'a str>,
-    route_parameter_names: Vec<&'a str>,
+    route_key: Option<K>,
+    route_parameter_names: Vec<&'r str>,
     common_prefix_length: usize,
-) -> RouteNodeRc<'a> {
+) -> RouteNodeRc<'r, K> {
     let new_node = RouteNode {
         anchor,
         has_parameter,
-        route_name,
+        route_key,
         route_parameter_names,
         ..Default::default()
     };
@@ -166,15 +166,15 @@ fn route_node_merge_intermediate<'a>(
     new_node_rc.clone()
 }
 
-fn route_node_merge_add_to_child<'a>(
-    _parent_node_rc: RouteNodeRc<'a>,
-    child_node_rc: RouteNodeRc<'a>,
-    anchor: &'a str,
+fn route_node_merge_add_to_child<'r, K>(
+    _parent_node_rc: RouteNodeRc<'r, K>,
+    child_node_rc: RouteNodeRc<'r, K>,
+    anchor: &'r str,
     _has_parameter: bool,
-    route_name: Option<&'a str>,
-    route_parameter_names: Vec<&'a str>,
+    route_key: Option<K>,
+    route_parameter_names: Vec<&'r str>,
     common_prefix_length: usize,
-) -> RouteNodeRc<'a> {
+) -> RouteNodeRc<'r, K> {
     let anchor = &anchor[common_prefix_length..];
     let has_parameter = false;
 
@@ -186,25 +186,25 @@ fn route_node_merge_add_to_child<'a>(
         child_node_rc2,
         anchor,
         has_parameter,
-        route_name,
+        route_key,
         route_parameter_names,
         common_prefix_length2,
     );
 }
 
-fn route_node_merge_add_to_new<'a>(
-    parent_node_rc: RouteNodeRc<'a>,
-    child_node_rc: RouteNodeRc<'a>,
-    anchor: &'a str,
+fn route_node_merge_add_to_new<'r, K>(
+    parent_node_rc: RouteNodeRc<'r, K>,
+    child_node_rc: RouteNodeRc<'r, K>,
+    anchor: &'r str,
     has_parameter: bool,
-    route_name: Option<&'a str>,
-    route_parameter_names: Vec<&'a str>,
+    route_key: Option<K>,
+    route_parameter_names: Vec<&'r str>,
     common_prefix_length: usize,
-) -> RouteNodeRc<'a> {
+) -> RouteNodeRc<'r, K> {
     let new_node = RouteNode {
         anchor,
         has_parameter,
-        route_name,
+        route_key,
         route_parameter_names,
         ..Default::default()
     };

@@ -1,11 +1,11 @@
 use super::*;
 use crate::string_utility::find_common_prefix_length;
 
-pub fn route_node_find_similar_child<'a>(
-    parent_node: &RouteNode<'a>,
-    anchor: &'a str,
+pub fn route_node_find_similar_child<'r, K>(
+    parent_node: &RouteNode<'r, K>,
+    anchor: &'r str,
     has_parameter: bool,
-) -> (usize, Option<RouteNodeRc<'a>>) {
+) -> (usize, Option<RouteNodeRc<'r, K>>) {
     let anchor_chars: Vec<_> = anchor.chars().collect();
 
     for child_node_rc in parent_node.children.iter() {
