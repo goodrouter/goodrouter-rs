@@ -1,20 +1,20 @@
 use regex::{CaptureMatches, Regex};
 
-pub fn parse_template_parts<'a>(template: &'a str, re: &'a Regex) -> TemplateParts<'a> {
+pub fn parse_template_parts<'r>(template: &'r str, re: &'r Regex) -> TemplateParts<'r> {
     TemplateParts::new(template, re)
 }
 
-pub struct TemplateParts<'a> {
-    template: &'a str,
-    matches: CaptureMatches<'a, 'a>,
+pub struct TemplateParts<'r> {
+    template: &'r str,
+    matches: CaptureMatches<'r, 'r>,
     is_finished: bool,
     index: usize,
     part_offset: usize,
-    parameter: &'a str,
+    parameter: &'r str,
 }
 
-impl<'a> TemplateParts<'a> {
-    fn new(template: &'a str, re: &'a Regex) -> Self {
+impl<'r> TemplateParts<'r> {
+    fn new(template: &'r str, re: &'r Regex) -> Self {
         let matches = re.captures_iter(template);
         let is_finished = false;
         let part_index = 0;
@@ -32,8 +32,8 @@ impl<'a> TemplateParts<'a> {
     }
 }
 
-impl<'a> Iterator for TemplateParts<'a> {
-    type Item = &'a str;
+impl<'r> Iterator for TemplateParts<'r> {
+    type Item = &'r str;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.is_finished {
