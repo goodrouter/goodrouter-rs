@@ -17,6 +17,7 @@ jobs:
           key: ${{ github.job }}-${{ hashFiles('Cargo.lock') }}
           path: |
             .cargo/
+            target/
       - run: apk add build-base
       - run: cargo test --all-targets
 
@@ -33,6 +34,7 @@ jobs:
           key: ${{ github.job }}-${{ hashFiles('Cargo.lock') }}
           path: |
             .cargo/
+            target/
       - run: apk add musl-dev
       - run: rustup component add clippy
       - run: cargo clippy --all-targets
@@ -56,6 +58,7 @@ jobs:
           key: ${{ github.job }}-${{ hashFiles('Cargo.lock') }}
           path: |
             .cargo/
+            target/
       - run: apk add cargo-edit
       - run: cargo set-version ${GITHUB_REF_NAME:1}
       - run: cargo publish --allow-dirty
