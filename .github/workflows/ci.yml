@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     container: rust:1.64-alpine3.15
     steps:
+      - uses: actions/checkout@v3
       - run: apk add tar
       - uses: actions/cache@v3
         with:
@@ -15,7 +16,6 @@ jobs:
           path: |
             ~/.cargo/
             ./target/
-      - uses: actions/checkout@v3
       - run: apk add build-base
       - run: cargo test --all-targets
 
@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     container: rust:1.64-alpine3.15
     steps:
+      - uses: actions/checkout@v3
       - run: apk add tar
       - uses: actions/cache@v3
         with:
@@ -30,7 +31,6 @@ jobs:
           path: |
             ~/.cargo/
             ./target/
-      - uses: actions/checkout@v3
       - run: apk add musl-dev
       - run: rustup component add clippy
       - run: cargo clippy --all-targets
@@ -46,6 +46,7 @@ jobs:
     env:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
+      - uses: actions/checkout@v3
       - run: apk add tar
       - uses: actions/cache@v3
         with:
@@ -53,7 +54,6 @@ jobs:
           path: |
             ~/.cargo/
             ./target/
-      - uses: actions/checkout@v3
       - run: apk add cargo-edit
       - run: cargo set-version ${GITHUB_REF_NAME:1}
       - run: cargo publish --allow-dirty
