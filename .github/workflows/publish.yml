@@ -13,13 +13,6 @@ jobs:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - uses: actions/checkout@v3
-      - run: apk add tar
-      - uses: actions/cache@v3
-        with:
-          key: ${{ github.job }}-${{ hashFiles('Cargo.lock') }}
-          path: |
-            .cargo/
-            target/
       - run: apk add cargo-edit
       - run: cargo set-version ${GITHUB_REF_NAME:1}
       - run: cargo publish --allow-dirty
