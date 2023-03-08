@@ -15,6 +15,7 @@ jobs:
             ~/.cargo/
             ./target/
       - uses: actions/checkout@v3
+      - run: apk add build-base
       - run: cargo test --all-targets
 
   test-lint:
