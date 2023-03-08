@@ -34,7 +34,8 @@ jobs:
     needs:
       - test-unit
       - test-lint
-    if: env.GITHUB_REF_TYPE == "tag" && startsWith( env.GITHUB_REF_NAME, "v" )
+    if: >
+      github.ref_type == "tag" && startsWith( github.ref_name, "v" )
     steps:
       - uses: actions/cache@v3
         with:
