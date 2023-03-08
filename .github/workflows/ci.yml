@@ -45,5 +45,6 @@ jobs:
           path: |
             ~/.cargo/
             ./target/
+      - run: cargo install cargo-edit
       - run: cargo set-version ${GITHUB_REF_NAME:1}
       - run: cargo publish --allow-dirty
