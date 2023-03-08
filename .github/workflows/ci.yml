@@ -1,0 +1,49 @@
+on: 
+  - push
+  - pull_request
+
+jobs:
+
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-${{ github.job }}
+          path: |
+            ~/.cargo/
+            ./target/
+      - uses: actions/checkout@v3
+      - run: cargo test --all-targets
+
+  test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-${{ github.job }}
+          path: |
+            ~/.cargo/
+            ./target/
+      - uses: actions/checkout@v3
+      - run: rustup component add clippy
+      - run: cargo clippy --all-targets
+
+  publish-crates:
+    runs-on: ubuntu-latest
+    needs:
+      - test-unit
+      - test-lint
+    if: >
+      github.ref_type == 'tag' && startsWith( github.ref_name, 'v' )
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    steps:
+      - uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-${{ github.job }}
+          path: |
+            ~/.cargo/
+            ./target/
+      - run: cargo set-version ${GITHUB_REF_NAME:1}
+      - run: cargo publish --allow-dirty
