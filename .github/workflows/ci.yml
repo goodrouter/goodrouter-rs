@@ -34,9 +34,6 @@ jobs:
     needs:
       - test-unit
       - test-lint
-    on: 
-      push:
-        tags: v*
     if: >
       github.ref_type == 'tag' && startsWith( github.ref_name, 'v' )
     env:
