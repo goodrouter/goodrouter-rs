@@ -10,12 +10,12 @@ jobs:
     steps:
       - uses: actions/cache@v3
         with:
-          key: ${{ runner.os }}-${{ github.job }}
+          key: ${{ github.job }}
           path: |
             ~/.cargo/
             ./target/
       - uses: actions/checkout@v3
-      - run: apk add build-base
+      - run: apk add tar build-base
       - run: cargo test --all-targets
 
   test-lint:
@@ -24,12 +24,12 @@ jobs:
     steps:
       - uses: actions/cache@v3
         with:
-          key: ${{ runner.os }}-${{ github.job }}
+          key: ${{ github.job }}
           path: |
             ~/.cargo/
             ./target/
       - uses: actions/checkout@v3
-      - run: apk add musl-dev
+      - run: apk add tar musl-dev
       - run: rustup component add clippy
       - run: cargo clippy --all-targets
 
@@ -46,11 +46,11 @@ jobs:
     steps:
       - uses: actions/cache@v3
         with:
-          key: ${{ runner.os }}-${{ github.job }}
+          key: ${{ github.job }}
           path: |
             ~/.cargo/
             ./target/
       - uses: actions/checkout@v3
-      - run: apk add cargo-edit
+      - run: apk add tar cargo-edit
       - run: cargo set-version ${GITHUB_REF_NAME:1}
       - run: cargo publish --allow-dirty
