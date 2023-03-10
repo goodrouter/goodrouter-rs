@@ -26,7 +26,7 @@ pub fn route_node_parse<'r, 'f, K: Copy>(
             Some(path.len())
         } else {
             path[..min(
-                node.anchor.len() + maximum_parameter_value_length,
+                maximum_parameter_value_length + node.anchor.len(),
                 path.len(),
             )]
                 .find(node.anchor)
@@ -57,12 +57,12 @@ pub fn route_node_parse<'r, 'f, K: Copy>(
         if let (Some(child_route_name), child_route_parameter_names, mut child_parameters_values) =
             route_node_parse(child_rc.clone(), path, maximum_parameter_value_length)
         {
-            let mut parameters = parameter_values.clone();
-            parameters.append(&mut child_parameters_values);
+            let mut parameter_values = parameter_values.clone();
+            parameter_values.append(&mut child_parameters_values);
             return (
                 Some(child_route_name),
                 child_route_parameter_names,
-                parameters,
+                parameter_values,
             );
         }
     }
