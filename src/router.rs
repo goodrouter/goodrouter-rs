@@ -149,13 +149,13 @@ mod tests {
         {
             let (route_key, route_parameters) = router.parse_route("/not-found");
             assert_eq!(route_key, None);
-            assert_eq!(route_parameters, vec![].into_iter().collect());
+            assert_eq!(route_parameters, Default::default());
         }
 
         {
             let (route_key, route_parameters) = router.parse_route("/product/all");
             assert_eq!(route_key, Some("all-products"));
-            assert_eq!(route_parameters, vec![].into_iter().collect());
+            assert_eq!(route_parameters, Default::default());
         }
 
         {
